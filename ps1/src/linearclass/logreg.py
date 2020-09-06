@@ -1,3 +1,5 @@
+from os.path import basename
+
 import numpy as np
 
 import util
@@ -22,7 +24,9 @@ def main(train_path, valid_path, save_path):
     model.fit(x_train, y_train)
 
     x_val, y_val = util.load_dataset(valid_path, add_intercept=True)
-    util.plot(x_val, y_val, model.theta, save_path="db.jpg")
+    util.plot(
+        x_val, y_val, model.theta, save_path=basename(save_path).split(".")[0] + ".jpg"
+    )
 
     np.savetxt(save_path, model.predict(x_val))
 
@@ -67,14 +71,17 @@ class LogisticRegression:
         m, d = x.shape
         y = y[:, np.newaxis]
 
-        if self.theta is None:
-            self.theta = np.zeros((1, d), dtype=np.float64)
+        theta = np.random.normal(scale=1 / np.sqrt(d), size=(1, d))
+
+        if self.theta is not None:
+            theta[0] = self.theta
         else:
-            self.theta = np.asarray(self.theta)
-            assert self.theta.shape == (1, d)
+            theta[0] = 0.0
+
+        self.theta = np.squeeze(theta)
 
         for i in range(self.max_iter):
-            prev = self.theta
+            prev = theta
 
             yhat = self.predict(x)[:, np.newaxis]
 
@@ -82,13 +89,20 @@ class LogisticRegression:
                 loss = self._compute_loss(y, yhat)
                 print(f"Loss step {i} : {loss:.4f}")
 
-            grad = -(x * (y - yhat)).mean(axis=0, keepdims=True).T
+            grad = -(x * (y - yhat)).mean(axis=0, keepdims=True)
+
+            assert grad.shape == (1, d), f"{grad.shape}"
+
             H = np.identity(m, dtype=np.float64) * yhat * (1 - yhat)
             H = x.T @ H @ x
 
-            self.theta -= np.pinv(H, hermitian=True) @ grad
+            assert H.shape == (d, d)
 
-            if (self.theta - prev).abs().sum() < self.eps:
+            theta -= self.step_size * (grad @ np.linalg.inv(H))
+
+            self.theta = np.squeeze(theta)
+
+            if np.abs(theta - prev).sum() < self.eps:
                 break
 
         # *** END CODE HERE ***
@@ -106,7 +120,9 @@ class LogisticRegression:
             Outputs of shape (n_examples,).
         """
         # *** START CODE HERE ***
-        return x @ self.theta.T
+        theta = self.theta.reshape(1, -1)
+        logit = np.squeeze(x @ theta.T)
+        return 1 / (1 + np.exp(-logit))
         # *** END CODE HERE ***
 
 
