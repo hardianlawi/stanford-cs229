@@ -29,7 +29,11 @@ def main(train_path, valid_path, save_path):
         x_val, y_val, model.theta, save_path=basename(save_path).split(".")[0] + ".jpg"
     )
 
-    np.savetxt(save_path, model.predict(x_val))
+    yhat = model.predict(x_val)
+    np.savetxt(save_path, yhat)
+
+    print(f"GDA acc: {util.compute_accuracy(y_val, yhat)}")
+    print(f"GDA log loss: {util.compute_log_loss(y_val, yhat)}")
     # *** END CODE HERE ***
 
 
@@ -105,7 +109,7 @@ class GDA:
         """
         # *** START CODE HERE ***
         theta = self.theta[1:].reshape(-1, 1)
-        return 1 / (1 + np.exp(-(x @ theta + self.theta[0])))
+        return np.squeeze(1 / (1 + np.exp(-(x @ theta + self.theta[0]))))
         # *** END CODE HERE
 
 

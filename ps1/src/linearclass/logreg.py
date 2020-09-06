@@ -28,8 +28,11 @@ def main(train_path, valid_path, save_path):
         x_val, y_val, model.theta, save_path=basename(save_path).split(".")[0] + ".jpg"
     )
 
-    np.savetxt(save_path, model.predict(x_val))
+    yhat = model.predict(x_val)
+    np.savetxt(save_path, yhat)
 
+    print(f"LogReg acc: {util.compute_accuracy(y_val, yhat)}")
+    print(f"LogReg log loss: {util.compute_log_loss(y_val, yhat)}")
     # *** END CODE HERE ***
 
 
@@ -86,7 +89,7 @@ class LogisticRegression:
             yhat = self.predict(x)[:, np.newaxis]
 
             if self.verbose:
-                loss = self._compute_loss(y, yhat)
+                loss = util.compute_log_loss(y, yhat)
                 print(f"Loss step {i} : {loss:.4f}")
 
             grad = -(x * (y - yhat)).mean(axis=0, keepdims=True)
@@ -106,9 +109,6 @@ class LogisticRegression:
                 break
 
         # *** END CODE HERE ***
-
-    def _compute_loss(self, y, yhat):
-        return -(y * np.log(yhat) + (1 - y) * np.log(1 - yhat)).mean()
 
     def predict(self, x):
         """Return predicted probabilities given new inputs x.

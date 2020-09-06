@@ -1,7 +1,6 @@
 import matplotlib
 matplotlib.use("Agg")
 
-
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -96,3 +95,11 @@ def plot(x, y, theta, save_path, correction=1.0):
     plt.xlabel("x1")
     plt.ylabel("x2")
     plt.savefig(save_path)
+
+
+def compute_accuracy(y, yhat):
+    return (y == (yhat > 0.5).astype(np.int64)).mean()
+
+
+def compute_log_loss(y, yhat):
+    return -(y * np.log(yhat) + (1 - y) * np.log(1 - yhat)).mean()
