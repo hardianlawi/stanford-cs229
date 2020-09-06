@@ -25,9 +25,7 @@ def main(train_path, valid_path, save_path):
     model.fit(x_train, y_train)
 
     x_val, y_val = util.load_dataset(valid_path, add_intercept=False)
-    util.plot(
-        x_val, y_val, model.theta, save_path=basename(save_path).split(".")[0] + ".jpg"
-    )
+    util.plot(x_val, y_val, model.theta, save_path=save_path.replace(".txt", "jpg"))
 
     yhat = model.predict(x_val)
     np.savetxt(save_path, yhat)
