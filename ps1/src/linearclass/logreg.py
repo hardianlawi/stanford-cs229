@@ -120,8 +120,8 @@ class LogisticRegression:
             Outputs of shape (n_examples,).
         """
         # *** START CODE HERE ***
-        theta = self.theta.reshape(1, -1)
-        logit = np.squeeze(x @ theta.T)
+        theta = self.theta.reshape(-1, 1)
+        logit = np.squeeze(x @ theta)
         return 1 / (1 + np.exp(-logit))
         # *** END CODE HERE ***
 
