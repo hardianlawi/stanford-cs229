@@ -1,4 +1,7 @@
+from os.path import basename
+
 import numpy as np
+
 import util
 
 
@@ -17,6 +20,16 @@ def main(train_path, valid_path, save_path):
     # Train a GDA classifier
     # Plot decision boundary on validation set
     # Use np.savetxt to save outputs from validation set to save_path
+
+    model = GDA()
+    model.fit(x_train, y_train)
+
+    x_val, y_val = util.load_dataset(valid_path, add_intercept=False)
+    util.plot(
+        x_val, y_val, model.theta, save_path=basename(save_path).split(".")[0] + ".jpg"
+    )
+
+    np.savetxt(save_path, model.predict(x_val))
     # *** END CODE HERE ***
 
 
@@ -28,8 +41,10 @@ class GDA:
         > clf.fit(x_train, y_train)
         > clf.predict(x_eval)
     """
-    def __init__(self, step_size=0.01, max_iter=10000, eps=1e-5,
-                 theta_0=None, verbose=True):
+
+    def __init__(
+        self, step_size=0.01, max_iter=10000, eps=1e-5, theta_0=None, verbose=True
+    ):
         """
         Args:
             step_size: Step size for iterative solvers only.
@@ -55,6 +70,28 @@ class GDA:
         # *** START CODE HERE ***
         # Find phi, mu_0, mu_1, and sigma
         # Write theta in terms of the parameters
+
+        m, d = x.shape
+
+        phi = y.mean()
+        mu_0 = x[y == 0].mean(axis=0, keepdims=True)
+        mu_1 = x[y == 1].mean(axis=0, keepdims=True)
+
+        sigma_0 = x[y == 0] - mu_0
+        sigma_0 = sigma_0.T @ sigma_0
+
+        sigma_1 = x[y == 1] - mu_1
+        sigma_1 = sigma_1.T @ sigma_1
+
+        sigma = (sigma_0 + sigma_1) / m
+        inv_sigma = np.linalg.inv(sigma)
+
+        self.theta = np.zeros(d + 1)
+        self.theta[0] = (
+            mu_0 @ inv_sigma @ mu_0.T - mu_1 @ inv_sigma @ mu_1.T
+        ) / 2 + np.log(phi / (1 - phi))
+        self.theta[1:] = np.squeeze(mu_1 @ inv_sigma - mu_0 @ inv_sigma)
+
         # *** END CODE HERE ***
 
     def predict(self, x):
@@ -67,13 +104,20 @@ class GDA:
             Outputs of shape (n_examples,).
         """
         # *** START CODE HERE ***
+        theta = self.theta[1:].reshape(-1, 1)
+        return 1 / (1 + np.exp(-(x @ theta + self.theta[0])))
         # *** END CODE HERE
 
-if __name__ == '__main__':
-    main(train_path='ds1_train.csv',
-         valid_path='ds1_valid.csv',
-         save_path='gda_pred_1.txt')
 
-    main(train_path='ds2_train.csv',
-         valid_path='ds2_valid.csv',
-         save_path='gda_pred_2.txt')
+if __name__ == "__main__":
+    main(
+        train_path="ds1_train.csv",
+        valid_path="ds1_valid.csv",
+        save_path="gda_pred_1.txt",
+    )
+
+    main(
+        train_path="ds2_train.csv",
+        valid_path="ds2_valid.csv",
+        save_path="gda_pred_2.txt",
+    )
