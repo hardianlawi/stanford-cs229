@@ -1,15 +1,18 @@
-import numpy as np
-import util
 import sys
+sys.path.append("../linearclass")
 
-sys.path.append('../linearclass')
+import numpy as np
+
+import util
+from logreg import LogisticRegression
+
+
 
 ### NOTE : You need to complete logreg implementation first!
 
-from logreg import LogisticRegression
 
 # Character to replace with sub-problem letter in plot_path/save_path
-WILDCARD = 'X'
+WILDCARD = "X"
 
 
 def main(train_path, valid_path, test_path, save_path):
@@ -26,21 +29,56 @@ def main(train_path, valid_path, test_path, save_path):
         test_path: Path to CSV file containing test set.
         save_path: Path to save predictions.
     """
-    output_path_true = save_path.replace(WILDCARD, 'true')
-    output_path_naive = save_path.replace(WILDCARD, 'naive')
-    output_path_adjusted = save_path.replace(WILDCARD, 'adjusted')
+    output_path_true = save_path.replace(WILDCARD, "true")
+    output_path_naive = save_path.replace(WILDCARD, "naive")
+    output_path_adjusted = save_path.replace(WILDCARD, "adjusted")
 
     # *** START CODE HERE ***
+
     # Part (a): Train and test on true labels
     # Make sure to save predicted probabilities to output_path_true using np.savetxt()
+
+    x_train, y_train = util.load_dataset(train_path, label_col="t", add_intercept=True)
+
+    model = LogisticRegression()
+    model.fit(x_train, y_train)
+
+    x_test, y_test = util.load_dataset(test_path, label_col="t", add_intercept=True)
+    util.plot(
+        x_test, y_test, model.theta, save_path=output_path_true.replace(".txt", ".jpg")
+    )
+
+    np.savetxt(output_path_true, model.predict(x_test))
+
+    print(f"LogReg acc: {util.compute_accuracy(y_test, model.predict(x_test))}")
+
     # Part (b): Train on y-labels and test on true labels
     # Make sure to save predicted probabilities to output_path_naive using np.savetxt()
+
+    x_train, y_train = util.load_dataset(train_path, label_col="y", add_intercept=True)
+
+    model = LogisticRegression()
+    model.fit(x_train, y_train)
+
+    x_test, y_test = util.load_dataset(test_path, label_col="t", add_intercept=True)
+
+    util.plot(
+        x_test, y_test, model.theta, save_path=output_path_naive.replace(".txt", ".jpg")
+    )
+
+    np.savetxt(output_path_naive, model.predict(x_test))
+
+    print(f"LogReg acc: {util.compute_accuracy(y_test, model.predict(x_test))}")
+
     # Part (f): Apply correction factor using validation set and test on true labels
     # Plot and use np.savetxt to save outputs to output_path_adjusted
     # *** END CODER HERE
 
-if __name__ == '__main__':
-    main(train_path='train.csv',
-        valid_path='valid.csv',
-        test_path='test.csv',
-        save_path='posonly_X_pred.txt')
+
+if __name__ == "__main__":
+    main(
+        train_path="train.csv",
+        valid_path="valid.csv",
+        test_path="test.csv",
+        save_path="posonly_X_pred.txt",
+    )

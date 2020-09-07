@@ -81,14 +81,15 @@ class LogisticRegression:
 
         self.theta = np.squeeze(theta)
 
+        if self.verbose:
+            print(
+                f"Initial loss: {util.compute_log_loss(y, self.predict(x)[:, np.newaxis]):.4f}"
+            )
+
         for i in range(self.max_iter):
             prev = theta
 
             yhat = self.predict(x)[:, np.newaxis]
-
-            if self.verbose:
-                loss = util.compute_log_loss(y, yhat)
-                print(f"Loss step {i} : {loss:.4f}")
 
             grad = -(x * (y - yhat)).mean(axis=0, keepdims=True)
 
@@ -100,12 +101,16 @@ class LogisticRegression:
             assert H.shape == (d, d)
 
             theta -= self.step_size * (grad @ np.linalg.inv(H))
-
             self.theta = np.squeeze(theta)
+
+            if self.verbose:
+                loss = util.compute_log_loss(y, yhat)
+                print(f"Loss step {i} : {loss:.4f}")
 
             if np.abs(theta - prev).sum() < self.eps:
                 break
 
+        return self
         # *** END CODE HERE ***
 
     def predict(self, x):

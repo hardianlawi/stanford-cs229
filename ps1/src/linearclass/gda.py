@@ -94,6 +94,7 @@ class GDA:
         ) / 2 + np.log(phi / (1 - phi))
         self.theta[1:] = np.squeeze(mu_1 @ inv_sigma - mu_0 @ inv_sigma)
 
+        return self
         # *** END CODE HERE ***
 
     def predict(self, x):
