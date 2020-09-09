@@ -98,4 +98,5 @@ def compute_accuracy(y, yhat):
 
 
 def compute_log_loss(y, yhat):
+    yhat = np.clip(yhat, np.finfo(float).eps, 1 - np.finfo(float).eps)
     return -(y * np.log(yhat) + (1 - y) * np.log(1 - yhat)).mean()

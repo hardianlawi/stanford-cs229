@@ -83,11 +83,11 @@ class LogisticRegression:
 
         if self.verbose:
             print(
-                f"Initial loss: {util.compute_log_loss(y, self.predict(x)[:, np.newaxis]):.4f}"
+                f"Loss at step 0: {util.compute_log_loss(y, self.predict(x)[:, np.newaxis]):.6f}"
             )
 
-        for i in range(self.max_iter):
-            prev = theta
+        for i in range(1, self.max_iter + 1):
+            prev = np.copy(theta)
 
             yhat = self.predict(x)[:, np.newaxis]
 
@@ -104,10 +104,13 @@ class LogisticRegression:
             self.theta = np.squeeze(theta)
 
             if self.verbose:
-                loss = util.compute_log_loss(y, yhat)
-                print(f"Loss step {i} : {loss:.4f}")
+                if i % 1000 == 0:
+                    print(
+                        f"Loss at step {i}: {util.compute_log_loss(y, self.predict(x)[:, np.newaxis]):.6f}"
+                    )
 
             if np.abs(theta - prev).sum() < self.eps:
+                print(f"stopping early bcs weights diff: {np.abs(theta - prev).sum()}")
                 break
 
         return self
