@@ -116,7 +116,7 @@ class LogisticRegression:
     def predict(self, x):
         """Return predicted probabilities given new inputs x.
 
-        Args:
+        Args:\
             x: Inputs of shape (n_examples, dim).
 
         Returns:

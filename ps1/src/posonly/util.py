@@ -1,8 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-plt.switch_backend("Agg")
-
 
 def add_intercept(x):
     """Add intercept to matrix x.
