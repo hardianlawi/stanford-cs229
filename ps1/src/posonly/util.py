@@ -84,8 +84,8 @@ def plot(x, y, theta, save_path, correction=1.0):
         + np.log((2 - correction) / correction) / theta[2]
     )
     plt.plot(x1, x2, c="red", linewidth=2)
-    plt.xlim(x[:, -2].min() - 4, x[:, -2].max() + 4)
-    plt.ylim(x[:, -1].min() - 4, x[:, -1].max() + 4)
+    # plt.xlim(x[:, -2].min() - 4, x[:, -2].max() + 4)
+    # plt.ylim(x[:, -1].min() - 4, x[:, -1].max() + 4)
 
     # Add labels and save to disk
     plt.xlabel("x1")

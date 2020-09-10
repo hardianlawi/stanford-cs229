@@ -7,7 +7,6 @@ import util
 from logreg import LogisticRegression
 
 
-
 ### NOTE : You need to complete logreg implementation first!
 
 
@@ -72,6 +71,24 @@ def main(train_path, valid_path, test_path, save_path):
 
     # Part (f): Apply correction factor using validation set and test on true labels
     # Plot and use np.savetxt to save outputs to output_path_adjusted
+
+    x_val, y_val = util.load_dataset(valid_path, label_col="t", add_intercept=True)
+    alpha = model.predict(x_val).mean()
+
+    x_test, y_test = util.load_dataset(test_path, label_col="t", add_intercept=True)
+
+    util.plot(
+        x_test,
+        y_test,
+        model.theta,
+        save_path=output_path_naive.replace(".txt", ".jpg"),
+        correction=alpha,
+    )
+
+    np.savetxt(output_path_naive, model.predict(x_test))
+
+    print(f"LogReg acc: {util.compute_accuracy(y_test, model.predict(x_test))}")
+
     # *** END CODER HERE
 
 

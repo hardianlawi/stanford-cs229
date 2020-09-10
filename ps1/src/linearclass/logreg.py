@@ -44,7 +44,7 @@ class LogisticRegression:
     """
 
     def __init__(
-        self, step_size=0.01, max_iter=1000000, eps=1e-5, theta_0=None, verbose=True
+        self, step_size=0.1, max_iter=1000000, eps=1e-5, theta_0=None, verbose=True
     ):
         """
         Args:
