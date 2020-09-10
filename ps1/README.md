@@ -1,4 +1,6 @@
-# CS229 Problem Set Instructions
+# CS229 Problem Set Instructions (Summer 2020)
+
+My solutions could be found in `answers` or [ps1](ps1.ipynb)
 
 ## Setup for Written Parts
 
