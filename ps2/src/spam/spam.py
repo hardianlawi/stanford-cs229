@@ -2,8 +2,8 @@ import collections
 
 import numpy as np
 
-import svm
-import util
+from .svm import *
+from .util import *
 
 
 def get_words(message):
@@ -185,7 +185,7 @@ def compute_best_svm_radius(
     # *** START CODE HERE ***
     accs = []
     for r in radius_to_consider:
-        output = svm.train_and_predict_svm(train_matrix, train_labels, val_matrix, r)
+        output = train_and_predict_svm(train_matrix, train_labels, val_matrix, r)
         accs.append((output == val_labels).mean())
 
     return radius_to_consider[np.argmax(accs)]
@@ -194,15 +194,15 @@ def compute_best_svm_radius(
 
 
 def main():
-    train_messages, train_labels = util.load_spam_dataset("spam_train.tsv")
-    val_messages, val_labels = util.load_spam_dataset("spam_val.tsv")
-    test_messages, test_labels = util.load_spam_dataset("spam_test.tsv")
+    train_messages, train_labels = load_spam_dataset("spam_train.tsv")
+    val_messages, val_labels = load_spam_dataset("spam_val.tsv")
+    test_messages, test_labels = load_spam_dataset("spam_test.tsv")
 
     dictionary = create_dictionary(train_messages)
 
     print("Size of dictionary: ", len(dictionary))
 
-    util.write_json("spam_dictionary", dictionary)
+    write_json("spam_dictionary", dictionary)
 
     train_matrix = transform_text(train_messages, dictionary)
 
@@ -231,17 +231,17 @@ def main():
 
     print("The top 5 indicative words for Naive Bayes are: ", top_5_words)
 
-    util.write_json("spam_top_indicative_words", top_5_words)
+    write_json("spam_top_indicative_words", top_5_words)
 
     optimal_radius = compute_best_svm_radius(
         train_matrix, train_labels, val_matrix, val_labels, [0.01, 0.1, 1, 10]
     )
 
-    util.write_json("spam_optimal_radius", optimal_radius)
+    write_json("spam_optimal_radius", optimal_radius)
 
     print("The optimal SVM radius was {}".format(optimal_radius))
 
-    svm_predictions = svm.train_and_predict_svm(
+    svm_predictions = train_and_predict_svm(
         train_matrix, train_labels, test_matrix, optimal_radius
     )
 
