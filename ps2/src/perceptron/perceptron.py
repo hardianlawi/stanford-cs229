@@ -3,7 +3,9 @@ import math
 import matplotlib.pyplot as plt
 import numpy as np
 
-import util
+from .util import *
+
+DIR_PATH = "src/perceptron"
 
 
 def initial_state():
@@ -16,6 +18,10 @@ def initial_state():
     """
 
     # *** START CODE HERE ***
+    state = {}
+    state["beta"] = []
+    state["data"] = []
+    return state
     # *** END CODE HERE ***
 
 
@@ -33,6 +39,17 @@ def predict(state, kernel, x_i):
         Returns the prediction (i.e 0 or 1)
     """
     # *** START CODE HERE ***
+    if len(state["beta"]) == 0:
+        return 1.0
+
+    beta = state["beta"]
+    data = np.asarray(state["data"])
+
+    z = 0
+    for b, x in zip(beta, data):
+        z += b * kernel(x, x_i)
+
+    return sign(z)
     # *** END CODE HERE ***
 
 
@@ -47,7 +64,16 @@ def update_state(state, kernel, learning_rate, x_i, y_i):
         y_i: A 0 or 1 indicating the label for a single instance
     """
     # *** START CODE HERE ***
+    beta = state["beta"]
+    data = state["data"]
+
+    ypred = predict(state, kernel, x_i)
+    if y_i - ypred != 0:
+        beta.append(learning_rate * (y_i - ypred))
+        data.append(x_i)
     # *** END CODE HERE ***
+
+    return state
 
 
 def sign(a):
@@ -80,6 +106,7 @@ def rbf_kernel(a, b, sigma=1):
     scaled_distance = -distance / (2 * (sigma) ** 2)
     return math.exp(scaled_distance)
 
+
 def non_psd_kernel(a, b):
     """An implementation of a non-psd kernel.
 
@@ -87,9 +114,10 @@ def non_psd_kernel(a, b):
         a: A vector
         b: A vector
     """
-    if(np.allclose(a,b,rtol=1e-5)):
+    if np.allclose(a, b, rtol=1e-5):
         return -1
     return 0
+
 
 def train_perceptron(kernel_name, kernel, learning_rate):
     """Train a perceptron with the given kernel.
@@ -104,31 +132,30 @@ def train_perceptron(kernel_name, kernel, learning_rate):
         kernel: The kernel function.
         learning_rate: The learning rate for training.
     """
-    train_x, train_y = util.load_csv('train.csv')
+    train_x, train_y = load_csv(f"{DIR_PATH}/train.csv")
 
     state = initial_state()
 
     for x_i, y_i in zip(train_x, train_y):
         update_state(state, kernel, learning_rate, x_i, y_i)
 
-    test_x, test_y = util.load_csv('test.csv')
+    test_x, test_y = load_csv(f"{DIR_PATH}/test.csv")
 
     plt.figure(figsize=(12, 8))
-    util.plot_contour(lambda a: predict(state, kernel, a))
-    util.plot_points(test_x, test_y)
-    plt.savefig('perceptron_{}_output.png'.format(kernel_name))
+    plot_contour(lambda a: predict(state, kernel, a))
+    plot_points(test_x, test_y)
+    plt.savefig("perceptron_{}_output.png".format(kernel_name))
 
     predict_y = [predict(state, kernel, test_x[i, :]) for i in range(test_y.shape[0])]
 
-    np.savetxt('perceptron_{}_predictions'.format(kernel_name), predict_y)
+    np.savetxt("perceptron_{}_predictions".format(kernel_name), predict_y)
 
 
 def main():
-    train_perceptron('dot', dot_kernel, 0.5)
-    train_perceptron('rbf', rbf_kernel, 0.5)
-    train_perceptron('non_psd', non_psd_kernel, 0.5)
+    train_perceptron("dot", dot_kernel, 0.5)
+    train_perceptron("rbf", rbf_kernel, 0.5)
+    train_perceptron("non_psd", non_psd_kernel, 0.5)
     plt.show()
-
 
 
 if __name__ == "__main__":
