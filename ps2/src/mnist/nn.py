@@ -1,10 +1,12 @@
-import numpy as np
-import matplotlib.pyplot as plt
 import argparse
+
+import matplotlib.pyplot as plt
+import numpy as np
+
 
 def softmax(x):
     """
-    Compute softmax function for a batch of input values. 
+    Compute softmax function for a batch of input values.
     The first dimension of the input corresponds to the batch size. The second dimension
     corresponds to every class in the output. When implementing softmax, you should be careful
     to only sum over the second dimension.
@@ -21,7 +23,12 @@ def softmax(x):
         A 2d numpy float array containing the softmax results of shape batch_size x number_of_classes
     """
     # *** START CODE HERE ***
+    out = x.copy()
+    out = out - out.max(axis=1, keepdims=True)
+    out = np.exp(out)
+    return out / out.sum(axis=1, keepdims=True)
     # *** END CODE HERE ***
+
 
 def sigmoid(x):
     """
@@ -34,7 +41,16 @@ def sigmoid(x):
         A numpy float array containing the sigmoid results
     """
     # *** START CODE HERE ***
+    pos_mask = x >= 0
+    neg_mask = x < 0
+    z = np.zeros_like(x)
+    z[pos_mask] = np.exp(-x[pos_mask])
+    z[neg_mask] = np.exp(x[neg_mask])
+    top = np.ones_like(x)
+    top[neg_mask] = z[neg_mask]
+    return top / (1 + z)
     # *** END CODE HERE ***
+
 
 def get_initial_params(input_size, num_hidden, num_output):
     """
@@ -52,23 +68,30 @@ def get_initial_params(input_size, num_hidden, num_output):
     As specified in the PDF, weight matrices should be initialized with a random normal distribution
     centered on zero and with scale 1.
     Bias vectors should be initialized with zero.
-    
+
     Args:
         input_size: The size of the input data
         num_hidden: The number of hidden states
         num_output: The number of output classes
-    
+
     Returns:
         A dict mapping parameter names to numpy arrays
     """
 
     # *** START CODE HERE ***
+    params = {}
+    params["W1"] = np.random.normal(size=(input_size, num_hidden))
+    params["b1"] = np.zeros(num_hidden)
+    params["W2"] = np.random.normal(size=(num_hidden, num_output))
+    params["b2"] = np.zeros(num_output)
+    return params
     # *** END CODE HERE ***
+
 
 def forward_prop(data, labels, params):
     """
     Implement the forward layer given the data, labels, and params.
-    
+
     Args:
         data: A numpy array containing the input
         labels: A 2d numpy array containing the labels
@@ -84,12 +107,27 @@ def forward_prop(data, labels, params):
             3. The average loss for these data elements
     """
     # *** START CODE HERE ***
+    W1 = params["W1"]
+    b1 = params["b1"]
+    W2 = params["W2"]
+    b2 = params["b2"]
+
+    a = sigmoid(data @ W1 + b1)
+    z = a @ W2 + b2
+    yhat = softmax(z)
+
+    def cross_entropy(yhat, labels):
+        return -np.log((labels * yhat).sum(axis=1)).mean()
+
+    loss = cross_entropy(yhat, labels)
+    return a, yhat, loss
     # *** END CODE HERE ***
+
 
 def backward_prop(data, labels, params, forward_prop_func):
     """
     Implement the backward propegation gradient computation step for a neural network
-    
+
     Args:
         data: A numpy array containing the input
         labels: A 2d numpy array containing the labels
@@ -102,18 +140,34 @@ def backward_prop(data, labels, params, forward_prop_func):
     Returns:
         A dictionary of strings to numpy arrays where each key represents the name of a weight
         and the values represent the gradient of the loss with respect to that weight.
-        
+
         In particular, it should have 4 elements:
             W1, W2, b1, and b2
     """
     # *** START CODE HERE ***
-    # *** END CODE HERE ***
+    grads = {}
 
+    a, yhat, _ = forward_prop_func(data, labels, params)
+
+    dz = (yhat - labels) / data.shape[0]
+
+    grads["W2"] = a.T @ dz
+    grads["b2"] = dz.sum(axis=0)
+
+    da = dz @ params["W2"].T
+    das = da * a * (1 - a)
+
+    grads["W1"] = data.T @ das
+    grads["b1"] = das.sum(axis=0)
+
+    return grads
+    # *** END CODE HERE ***
+    
 
 def backward_prop_regularized(data, labels, params, forward_prop_func, reg):
     """
     Implement the backward propegation gradient computation step for a neural network
-    
+
     Args:
         data: A numpy array containing the input
         labels: A 2d numpy array containing the labels
@@ -127,14 +181,27 @@ def backward_prop_regularized(data, labels, params, forward_prop_func, reg):
     Returns:
         A dictionary of strings to numpy arrays where each key represents the name of a weight
         and the values represent the gradient of the loss with respect to that weight.
-        
+
         In particular, it should have 4 elements:
             W1, W2, b1, and b2
     """
     # *** START CODE HERE ***
+    grads = backward_prop(data, labels, params, forward_prop_func)
+    grads["W1"] += 2 * reg * params["W1"]
+    grads["W2"] += 2 * reg * params["W2"]
+    return grads
     # *** END CODE HERE ***
 
-def gradient_descent_epoch(train_data, train_labels, learning_rate, batch_size, params, forward_prop_func, backward_prop_func):
+
+def gradient_descent_epoch(
+    train_data,
+    train_labels,
+    learning_rate,
+    batch_size,
+    params,
+    forward_prop_func,
+    backward_prop_func,
+):
     """
     Perform one epoch of gradient descent on the given training data using the provided learning rate.
 
@@ -154,15 +221,33 @@ def gradient_descent_epoch(train_data, train_labels, learning_rate, batch_size, 
     """
 
     # *** START CODE HERE ***
+    m = len(train_data)
+    num_iters = m // batch_size if m % batch_size != 0 else m // batch_size - 1
+    for i in range(num_iters):
+        data = train_data[i : i + batch_size]
+        labels = train_labels[i : i + batch_size]
+        grads = backward_prop_func(data, labels, params, forward_prop_func)
+        for k in params:
+            params[k] -= learning_rate * grads[k]
     # *** END CODE HERE ***
 
     # This function does not return anything
     return
 
+
 def nn_train(
-    train_data, train_labels, dev_data, dev_labels, 
-    get_initial_params_func, forward_prop_func, backward_prop_func,
-    num_hidden=300, learning_rate=5, num_epochs=30, batch_size=1000):
+    train_data,
+    train_labels,
+    dev_data,
+    dev_labels,
+    get_initial_params_func,
+    forward_prop_func,
+    backward_prop_func,
+    num_hidden=300,
+    learning_rate=5,
+    num_epochs=30,
+    batch_size=1000,
+):
 
     (nexp, dim) = train_data.shape
 
@@ -173,44 +258,68 @@ def nn_train(
     accuracy_train = []
     accuracy_dev = []
     for epoch in range(num_epochs):
-        gradient_descent_epoch(train_data, train_labels, 
-            learning_rate, batch_size, params, forward_prop_func, backward_prop_func)
+        gradient_descent_epoch(
+            train_data,
+            train_labels,
+            learning_rate,
+            batch_size,
+            params,
+            forward_prop_func,
+            backward_prop_func,
+        )
 
         h, output, cost = forward_prop_func(train_data, train_labels, params)
         cost_train.append(cost)
-        accuracy_train.append(compute_accuracy(output,train_labels))
+        accuracy_train.append(compute_accuracy(output, train_labels))
         h, output, cost = forward_prop_func(dev_data, dev_labels, params)
         cost_dev.append(cost)
         accuracy_dev.append(compute_accuracy(output, dev_labels))
 
     return params, cost_train, cost_dev, accuracy_train, accuracy_dev
 
+
 def nn_test(data, labels, params):
     h, output, cost = forward_prop(data, labels, params)
     accuracy = compute_accuracy(output, labels)
     return accuracy
 
+
 def compute_accuracy(output, labels):
-    accuracy = (np.argmax(output,axis=1) == 
-        np.argmax(labels,axis=1)).sum() * 1. / labels.shape[0]
+    accuracy = (
+        (np.argmax(output, axis=1) == np.argmax(labels, axis=1)).sum()
+        * 1.0
+        / labels.shape[0]
+    )
     return accuracy
+
 
 def one_hot_labels(labels):
     one_hot_labels = np.zeros((labels.size, 10))
-    one_hot_labels[np.arange(labels.size),labels.astype(int)] = 1
+    one_hot_labels[np.arange(labels.size), labels.astype(int)] = 1
     return one_hot_labels
 
+
 def read_data(images_file, labels_file):
-    x = np.loadtxt(images_file, delimiter=',')
-    y = np.loadtxt(labels_file, delimiter=',')
+    x = np.loadtxt(images_file, delimiter=",")
+    y = np.loadtxt(labels_file, delimiter=",")
     return x, y
 
-def run_train_test(name, all_data, all_labels, backward_prop_func, num_epochs, plot=True):
+
+def run_train_test(
+    name, all_data, all_labels, backward_prop_func, num_epochs, plot=True
+):
     params, cost_train, cost_dev, accuracy_train, accuracy_dev = nn_train(
-        all_data['train'], all_labels['train'], 
-        all_data['dev'], all_labels['dev'],
-        get_initial_params, forward_prop, backward_prop_func,
-        num_hidden=300, learning_rate=5, num_epochs=num_epochs, batch_size=1000
+        all_data["train"],
+        all_labels["train"],
+        all_data["dev"],
+        all_labels["dev"],
+        get_initial_params,
+        forward_prop,
+        backward_prop_func,
+        num_hidden=300,
+        learning_rate=5,
+        num_epochs=num_epochs,
+        batch_size=1000,
     )
 
     t = np.arange(num_epochs)
@@ -218,74 +327,79 @@ def run_train_test(name, all_data, all_labels, backward_prop_func, num_epochs, p
     if plot:
         fig, (ax1, ax2) = plt.subplots(2, 1)
 
-        ax1.plot(t, cost_train,'r', label='train')
-        ax1.plot(t, cost_dev, 'b', label='dev')
-        ax1.set_xlabel('epochs')
-        ax1.set_ylabel('loss')
-        if name == 'baseline':
-            ax1.set_title('Without Regularization')
+        ax1.plot(t, cost_train, "r", label="train")
+        ax1.plot(t, cost_dev, "b", label="dev")
+        ax1.set_xlabel("epochs")
+        ax1.set_ylabel("loss")
+        if name == "baseline":
+            ax1.set_title("Without Regularization")
         else:
-            ax1.set_title('With Regularization')
+            ax1.set_title("With Regularization")
         ax1.legend()
 
-        ax2.plot(t, accuracy_train,'r', label='train')
-        ax2.plot(t, accuracy_dev, 'b', label='dev')
-        ax2.set_xlabel('epochs')
-        ax2.set_ylabel('accuracy')
+        ax2.plot(t, accuracy_train, "r", label="train")
+        ax2.plot(t, accuracy_dev, "b", label="dev")
+        ax2.set_xlabel("epochs")
+        ax2.set_ylabel("accuracy")
         ax2.legend()
 
-        fig.savefig('./' + name + '.pdf')
+        fig.savefig("./" + name + ".pdf")
 
-    accuracy = nn_test(all_data['test'], all_labels['test'], params)
-    print('For model %s, got accuracy: %f' % (name, accuracy))
-    
+    accuracy = nn_test(all_data["test"], all_labels["test"], params)
+    print("For model %s, got accuracy: %f" % (name, accuracy))
+
     return accuracy
 
+
 def main(plot=True):
-    parser = argparse.ArgumentParser(description='Train a nn model.')
-    parser.add_argument('--num_epochs', type=int, default=30)
+    parser = argparse.ArgumentParser(description="Train a nn model.")
+    parser.add_argument("--num_epochs", type=int, default=30)
 
     args = parser.parse_args()
 
     np.random.seed(100)
-    train_data, train_labels = read_data('./images_train.csv', './labels_train.csv')
+    train_data, train_labels = read_data("./images_train.csv", "./labels_train.csv")
     train_labels = one_hot_labels(train_labels)
     p = np.random.permutation(60000)
-    train_data = train_data[p,:]
-    train_labels = train_labels[p,:]
+    train_data = train_data[p, :]
+    train_labels = train_labels[p, :]
 
-    dev_data = train_data[0:10000,:]
-    dev_labels = train_labels[0:10000,:]
-    train_data = train_data[10000:,:]
-    train_labels = train_labels[10000:,:]
+    dev_data = train_data[0:10000, :]
+    dev_labels = train_labels[0:10000, :]
+    train_data = train_data[10000:, :]
+    train_labels = train_labels[10000:, :]
 
     mean = np.mean(train_data)
     std = np.std(train_data)
     train_data = (train_data - mean) / std
     dev_data = (dev_data - mean) / std
 
-    test_data, test_labels = read_data('./images_test.csv', './labels_test.csv')
+    test_data, test_labels = read_data("./images_test.csv", "./labels_test.csv")
     test_labels = one_hot_labels(test_labels)
     test_data = (test_data - mean) / std
 
-    all_data = {
-        'train': train_data,
-        'dev': dev_data,
-        'test': test_data
-    }
+    all_data = {"train": train_data, "dev": dev_data, "test": test_data}
 
     all_labels = {
-        'train': train_labels,
-        'dev': dev_labels,
-        'test': test_labels,
+        "train": train_labels,
+        "dev": dev_labels,
+        "test": test_labels,
     }
-    
-    baseline_acc = run_train_test('baseline', all_data, all_labels, backward_prop, args.num_epochs, plot)
-    reg_acc = run_train_test('regularized', all_data, all_labels, 
+
+    baseline_acc = run_train_test(
+        "baseline", all_data, all_labels, backward_prop, args.num_epochs, plot
+    )
+    reg_acc = run_train_test(
+        "regularized",
+        all_data,
+        all_labels,
         lambda a, b, c, d: backward_prop_regularized(a, b, c, d, reg=0.0001),
-        args.num_epochs, plot)
-        
+        args.num_epochs,
+        plot,
+    )
+
     return baseline_acc, reg_acc
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
