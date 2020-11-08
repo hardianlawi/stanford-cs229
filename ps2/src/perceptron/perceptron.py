@@ -150,6 +150,8 @@ def train_perceptron(kernel_name, kernel, learning_rate):
 
     np.savetxt("perceptron_{}_predictions".format(kernel_name), predict_y)
 
+    print("test accuracy:", np.mean(predict_y == test_y))
+
 
 def main():
     train_perceptron("dot", dot_kernel, 0.5)
