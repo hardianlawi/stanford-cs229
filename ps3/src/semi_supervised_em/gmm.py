@@ -1,27 +1,32 @@
-import matplotlib.pyplot as plt
-import numpy as np
 import os
 
-PLOT_COLORS = ['red', 'green', 'blue', 'orange']  # Colors for your plots
-K = 4           # Number of Gaussians in the mixture model
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy.stats import multivariate_normal
+
+PLOT_COLORS = ["red", "green", "blue", "orange"]  # Colors for your plots
+K = 4  # Number of Gaussians in the mixture model
 NUM_TRIALS = 3  # Number of trials to run (can be adjusted for debugging)
 UNLABELED = -1  # Cluster label for unlabeled data points (do not change)
 
 
 def main(is_semi_supervised, trial_num):
     """Problem 3: EM for Gaussian Mixture Models (unsupervised and semi-supervised)"""
-    print('Running {} EM algorithm...'
-          .format('semi-supervised' if is_semi_supervised else 'unsupervised'))
+    print(
+        "Running {} EM algorithm...".format(
+            "semi-supervised" if is_semi_supervised else "unsupervised"
+        )
+    )
 
     # Load dataset
-    train_path = os.path.join('.', 'train.csv')
+    train_path = os.path.join("src/semi_supervised_em", "train.csv")
     x_all, z_all = load_gmm_dataset(train_path)
 
     # Split into labeled and unlabeled examples
     labeled_idxs = (z_all != UNLABELED).squeeze()
-    x_tilde = x_all[labeled_idxs, :]   # Labeled examples
-    z_tilde = z_all[labeled_idxs, :]   # Corresponding labels
-    x = x_all[~labeled_idxs, :]        # Unlabeled examples
+    x_tilde = x_all[labeled_idxs, :]  # Labeled examples
+    z_tilde = z_all[labeled_idxs, :]  # Corresponding labels
+    x = x_all[~labeled_idxs, :]  # Unlabeled examples
 
     # *** START CODE HERE ***
     # (1) Initialize mu and sigma by splitting the n_examples data points uniformly at random
@@ -30,6 +35,17 @@ def main(is_semi_supervised, trial_num):
     # phi should be a numpy array of shape (K,)
     # (3) Initialize the w values to place equal probability on each Gaussian
     # w should be a numpy array of shape (m, K)
+
+    m, n = x.shape
+
+    mu = x[np.random.choice(np.arange(len(x)), size=K)]
+    sigma = np.zeros((K, n, n))
+    for k in range(K):
+        diff = x - mu[k].reshape(1, -1)
+        sigma[k] = diff.T @ diff / x.shape[0]
+    phi = np.ones(K) / K
+    w = np.ones((x.shape[0], K)) / K
+
     # *** END CODE HERE ***
 
     if is_semi_supervised:
@@ -38,9 +54,9 @@ def main(is_semi_supervised, trial_num):
         w = run_em(x, w, phi, mu, sigma)
 
     # Plot your predictions
-    z_pred = np.zeros(n)
+    z_pred = np.zeros(m)
     if w is not None:  # Just a placeholder for the starter code
-        for i in range(n):
+        for i in range(m):
             z_pred[i] = np.argmax(w[i])
 
     plot_gmm_preds(x, z_pred, is_semi_supervised, plot_id=trial_num)
@@ -71,8 +87,8 @@ def run_em(x, w, phi, mu, sigma):
     # See below for explanation of the convergence criterion
     it = 0
     ll = prev_ll = None
+    losses = []
     while it < max_iter and (prev_ll is None or np.abs(ll - prev_ll) >= eps):
-        pass  # Just a placeholder for the starter code
         # *** START CODE HERE
         # (1) E-step: Update your estimates in w
         # (2) M-step: Update the model parameters phi, mu, and sigma
@@ -80,7 +96,43 @@ def run_em(x, w, phi, mu, sigma):
         # By log-likelihood, we mean `ll = sum_x[log(sum_z[p(x|z) * p(z)])]`.
         # We define convergence by the first iteration where abs(ll - prev_ll) < eps.
         # Hint: For debugging, recall part (a). We showed that ll should be monotonically increasing.
+
+        prev_ll = ll
+
+        # E-step
+        w = np.zeros_like(w)
+        for k in range(K):
+            w[:, k] = multivariate_normal.pdf(x, mean=mu[k], cov=sigma[k]) * phi[k]
+        w = w / w.sum(axis=1, keepdims=True)
+
+        # M-step
+        for k in range(K):
+            wl = w[:, k].reshape(-1, 1)
+            diff = x - mu[k].reshape(1, -1)
+            diff = diff[:, :, np.newaxis]
+            sigma[k] = (
+                wl[:, :, np.newaxis] * np.einsum("ijk,ilk->ijl", diff, diff)
+            ).sum(axis=0) / wl.sum()
+            mu[k] = (wl * x).sum(axis=0) / wl.sum()
+            phi[k] = wl.mean()
+
+        # Log-likelihood
+        def _log_likelihood(x, mu, sigma, phi):
+            ll = 0
+            for k in range(K):
+                ll += multivariate_normal.pdf(x, mean=mu[k], cov=sigma[k]) * phi[k]
+            ll = np.log(ll).sum()
+            return ll
+
+        ll = _log_likelihood(x, mu, sigma, phi)
+        losses.append(ll)
+        it += 1
         # *** END CODE HERE ***
+
+    print(f"Converged after: {it} iterations")
+    plt.figure()
+    plt.plot(np.arange(len(losses)), losses)
+    plt.show()
 
     return w
 
@@ -105,8 +157,8 @@ def run_semi_supervised_em(x, x_tilde, z_tilde, w, phi, mu, sigma):
         example x^(i) belonging to the j-th Gaussian in the mixture.
     """
     # No need to change any of these parameters
-    alpha = 20.  # Weight for the labeled examples
-    eps = 1e-3   # Convergence threshold
+    alpha = 20.0  # Weight for the labeled examples
+    eps = 1e-3  # Convergence threshold
     max_iter = 1000
 
     # Stop when the absolute change in log-likelihood is < eps
@@ -140,17 +192,21 @@ def plot_gmm_preds(x, z, with_supervision, plot_id):
     NOTE: You do not need to edit this function.
     """
     plt.figure(figsize=(12, 8))
-    plt.title('{} GMM Predictions'.format('Semi-supervised' if with_supervision else 'Unsupervised'))
-    plt.xlabel('x_1')
-    plt.ylabel('x_2')
+    plt.title(
+        "{} GMM Predictions".format(
+            "Semi-supervised" if with_supervision else "Unsupervised"
+        )
+    )
+    plt.xlabel("x_1")
+    plt.ylabel("x_2")
 
     for x_1, x_2, z_ in zip(x[:, 0], x[:, 1], z):
-        color = 'gray' if z_ < 0 else PLOT_COLORS[int(z_)]
+        color = "gray" if z_ < 0 else PLOT_COLORS[int(z_)]
         alpha = 0.25 if z_ < 0 else 0.75
-        plt.scatter(x_1, x_2, marker='.', c=color, alpha=alpha)
+        plt.scatter(x_1, x_2, marker=".", c=color, alpha=alpha)
 
-    file_name = 'pred{}_{}.pdf'.format('_ss' if with_supervision else '', plot_id)
-    save_path = os.path.join('.', file_name)
+    file_name = "pred{}_{}.pdf".format("_ss" if with_supervision else "", plot_id)
+    save_path = os.path.join(".", file_name)
     plt.savefig(save_path)
 
 
@@ -168,15 +224,15 @@ def load_gmm_dataset(csv_path):
     """
 
     # Load headers
-    with open(csv_path, 'r') as csv_fh:
-        headers = csv_fh.readline().strip().split(',')
+    with open(csv_path, "r") as csv_fh:
+        headers = csv_fh.readline().strip().split(",")
 
     # Load features and labels
-    x_cols = [i for i in range(len(headers)) if headers[i].startswith('x')]
-    z_cols = [i for i in range(len(headers)) if headers[i] == 'z']
+    x_cols = [i for i in range(len(headers)) if headers[i].startswith("x")]
+    z_cols = [i for i in range(len(headers)) if headers[i] == "z"]
 
-    x = np.loadtxt(csv_path, delimiter=',', skiprows=1, usecols=x_cols, dtype=float)
-    z = np.loadtxt(csv_path, delimiter=',', skiprows=1, usecols=z_cols, dtype=float)
+    x = np.loadtxt(csv_path, delimiter=",", skiprows=1, usecols=x_cols, dtype=float)
+    z = np.loadtxt(csv_path, delimiter=",", skiprows=1, usecols=z_cols, dtype=float)
 
     if z.ndim == 1:
         z = np.expand_dims(z, axis=-1)
@@ -184,7 +240,7 @@ def load_gmm_dataset(csv_path):
     return x, z
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     np.random.seed(229)
     # Run NUM_TRIALS trials to see how different initializations
     # affect the final predictions with and without supervision
