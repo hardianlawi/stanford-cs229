@@ -132,6 +132,9 @@ def run_em(x, w, phi, mu, sigma):
     print(f"Converged after: {it} iterations")
     plt.figure()
     plt.plot(np.arange(len(losses)), losses)
+    plt.xlabel("Iteration")
+    plt.ylabel("Log loss")
+    plt.title("Unsupervised EM")
     plt.show()
 
     return w
@@ -161,19 +164,83 @@ def run_semi_supervised_em(x, x_tilde, z_tilde, w, phi, mu, sigma):
     eps = 1e-3  # Convergence threshold
     max_iter = 1000
 
+    z_tilde = z_tilde.squeeze()
+
     # Stop when the absolute change in log-likelihood is < eps
     # See below for explanation of the convergence criterion
     it = 0
     ll = prev_ll = None
+    losses = []
     while it < max_iter and (prev_ll is None or np.abs(ll - prev_ll) >= eps):
-        pass  # Just a placeholder for the starter code
         # *** START CODE HERE ***
         # (1) E-step: Update your estimates in w
         # (2) M-step: Update the model parameters phi, mu, and sigma
         # (3) Compute the log-likelihood of the data to check for convergence.
         # Hint: Make sure to include alpha in your calculation of ll.
         # Hint: For debugging, recall part (a). We showed that ll should be monotonically increasing.
+
+        prev_ll = ll
+
+        # E-step
+        w = np.zeros_like(w)
+        for k in range(K):
+            w[:, k] = multivariate_normal.pdf(x, mean=mu[k], cov=sigma[k]) * phi[k]
+        w = w / w.sum(axis=1, keepdims=True)
+
+        # M-step
+        for k in range(K):
+            wl = w[:, k].reshape(-1, 1)
+            unlabeled_diff = x - mu[k].reshape(1, -1)
+            unlabeled_diff = unlabeled_diff[:, :, np.newaxis]
+
+            x_tilde_k = x_tilde[z_tilde == k]
+            labeled_diff = x_tilde_k - mu[k].reshape(1, -1)
+            labeled_diff = labeled_diff[:, :, np.newaxis]
+
+            sigma[k] = (
+                (
+                    wl[:, :, np.newaxis]
+                    * np.einsum("ijk,ilk->ijl", unlabeled_diff, unlabeled_diff)
+                ).sum(axis=0)
+                + (alpha * np.einsum("ijk,ilk->ijl", labeled_diff, labeled_diff)).sum(
+                    axis=0
+                )
+            ) / (wl.sum() + alpha * labeled_diff.shape[0])
+
+            mu[k] = ((wl * x).sum(axis=0) + alpha * x_tilde_k.sum(axis=0)) / (
+                wl.sum() + alpha * x_tilde_k.shape[0]
+            )
+
+            phi[k] = (wl.sum() + alpha * x_tilde_k.shape[0]) / (
+                wl.shape[0] + alpha * x_tilde.shape[0]
+            )
+
+        # Log-likelihood
+        def _log_likelihood(x, x_tilde, z_tilde, mu, sigma, phi):
+            ll = 0
+            for k in range(K):
+                ll += multivariate_normal.pdf(x, mean=mu[k], cov=sigma[k]) * phi[k]
+            ll = np.log(ll).sum()
+            for k in range(K):
+                x_tilde_k = x_tilde[z_tilde == k]
+                ll += np.log(
+                    multivariate_normal.pdf(x_tilde_k, mean=mu[k], cov=sigma[k])
+                    * phi[k]
+                ).sum()
+            return ll
+
+        ll = _log_likelihood(x, x_tilde, z_tilde, mu, sigma, phi)
+        losses.append(ll)
+        it += 1
         # *** END CODE HERE ***
+
+    print(f"Converged after: {it} iterations")
+    plt.figure()
+    plt.plot(np.arange(len(losses)), losses)
+    plt.xlabel("Iteration")
+    plt.ylabel("Log loss")
+    plt.title("Semi-supervised EM")
+    plt.show()
 
     return w
 
@@ -205,9 +272,11 @@ def plot_gmm_preds(x, z, with_supervision, plot_id):
         alpha = 0.25 if z_ < 0 else 0.75
         plt.scatter(x_1, x_2, marker=".", c=color, alpha=alpha)
 
-    file_name = "pred{}_{}.pdf".format("_ss" if with_supervision else "", plot_id)
-    save_path = os.path.join(".", file_name)
-    plt.savefig(save_path)
+    plt.show()
+
+    # file_name = "pred{}_{}.pdf".format("_ss" if with_supervision else "", plot_id)
+    # save_path = os.path.join(".", file_name)
+    # plt.savefig(save_path)
 
 
 def load_gmm_dataset(csv_path):
@@ -251,5 +320,5 @@ if __name__ == "__main__":
         # Once you've implemented the semi-supervised version,
         # uncomment the following line.
         # You do not need to add any other lines in this code block.
-        # main(is_semi_supervised=True, trial_num=t)
+        main(is_semi_supervised=True, trial_num=t)
         # *** END CODE HERE ***
