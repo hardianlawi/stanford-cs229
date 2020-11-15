@@ -1,7 +1,24 @@
 # Stanford CS229 Assignment Solutions
 
-- [ ] Assignment 0 (Summer 2020)
-- [x] Assignment 1 (Summer 2020)
-- [x] Assignment 2 (Summer 2020)
-- [ ] Assignment 3 (Summer 2020 & Autumn 2018)
-- [ ] Assignment 4 (Autumn 2018)
+- Assignment 0 (Summer 2020)
+- [Assignment 1](./ps1/ps1.ipynb) (Summer 2020)
+    - [x] Linear Classifiers (logistic regression and GDA)
+    - [x] Incomplete, Positive-Only Labels
+    - [x] Poisson Regression
+    - [x] Convexity of Generalzied Linear Models
+    - [x] Linear regression: linear in what?
+- [Assignment 2](./ps2/ps2.ipynb) (Summer 2020 & Autumn 2018)
+    - [x] Logistic Regression: Training stability
+    - [x] Model Calibration
+    - [x] Spam classification
+    - [x] Constructing kernels
+    - [x] Kernelizing the Perceptron
+    - [x] Neural Networks: MNIST Image classification
+    - [x] Bayesian Interpretation of Regularization
+- [Assignment 3](./ps3/ps3.ipynb) (Summer 2020 & Autumn 2018)
+    - [x] A Simple Neural Network
+    - [x] KL divergence and Maximum Likelihood
+    - [x] K-means for compression
+    - [x] Semi-supervised EM
+    - [x] Independent components Analysis
+- Assignment 4 (Autumn 2018)
