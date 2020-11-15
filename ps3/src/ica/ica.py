@@ -1,7 +1,9 @@
+import os
+
 import numpy as np
 import scipy.io.wavfile
-import os
 from numpy import linalg as LA
+
 
 def update_W(W, x, learning_rate):
     """
@@ -19,6 +21,11 @@ def update_W(W, x, learning_rate):
     """
 
     # *** START CODE HERE ***
+
+    x = x.reshape(-1, 1)
+
+    updated_W = W + learning_rate * (np.linalg.inv(W.T) - np.sign(W @ x) @ x.T)
+
     # *** END CODE HERE ***
 
     return updated_W
@@ -39,6 +46,7 @@ def unmix(X, W):
     S = np.zeros(X.shape)
 
     # *** START CODE HERE ***
+    S = X @ W.T
     # *** END CODE HERE ***
 
     return S
@@ -46,25 +54,47 @@ def unmix(X, W):
 
 Fs = 11025
 
+
 def normalize(dat):
     return 0.99 * dat / np.max(np.abs(dat))
 
+
 def load_data():
-    mix = np.loadtxt('./mix.dat')
+    mix = np.loadtxt("src/ica/mix.dat")
     return mix
-    
+
+
 def save_W(W):
-    np.savetxt('./W.txt',W)
+    np.savetxt("src/ica/W.txt", W)
+
 
 def save_sound(audio, name):
-    scipy.io.wavfile.write('./{}.wav'.format(name), Fs, audio)
+    scipy.io.wavfile.write("./{}.wav".format(name), Fs, audio)
+
 
 def unmixer(X):
     M, N = X.shape
     W = np.eye(N)
 
-    anneal = [0.1 , 0.1, 0.1, 0.05, 0.05, 0.05, 0.02, 0.02, 0.01 , 0.01, 0.005, 0.005, 0.002, 0.002, 0.001, 0.001]
-    print('Separating tracks ...')
+    anneal = [
+        0.1,
+        0.1,
+        0.1,
+        0.05,
+        0.05,
+        0.05,
+        0.02,
+        0.02,
+        0.01,
+        0.01,
+        0.005,
+        0.005,
+        0.002,
+        0.002,
+        0.001,
+        0.001,
+    ]
+    print("Separating tracks ...")
     for lr in anneal:
         print(lr)
         rand = np.random.permutation(range(M))
@@ -74,6 +104,7 @@ def unmixer(X):
 
     return W
 
+
 def main():
     # Seed the randomness of the simulation so this outputs the same thing each time
     np.random.seed(0)
@@ -82,7 +113,7 @@ def main():
     print(X.shape)
 
     for i in range(X.shape[1]):
-        save_sound(X[:, i], 'mixed_{}'.format(i))
+        save_sound(X[:, i], "mixed_{}".format(i))
 
     W = unmixer(X)
     print(W)
@@ -90,9 +121,10 @@ def main():
     S = normalize(unmix(X, W))
     assert S.shape[1] == 5
     for i in range(S.shape[1]):
-        if os.path.exists('split_{}'.format(i)):
-            os.unlink('split_{}'.format(i))
-        save_sound(S[:, i], 'split_{}'.format(i))
+        if os.path.exists("split_{}".format(i)):
+            os.unlink("split_{}".format(i))
+        save_sound(S[:, i], "split_{}".format(i))
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
