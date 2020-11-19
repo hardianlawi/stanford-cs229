@@ -18,6 +18,7 @@
 - [Assignment 3](./ps3/ps3.ipynb) (Summer 2020 & Autumn 2018)
     - [x] A Simple Neural Network
     - [x] KL divergence and Maximum Likelihood
+    - [x] KL Divergence, Fisher Informatino, and the Natural Gradient
     - [x] K-means for compression
     - [x] Semi-supervised EM
     - [x] Independent components Analysis
